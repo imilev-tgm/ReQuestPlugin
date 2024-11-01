@@ -1,0 +1,21 @@
+{
+    "name": "request-backend",
+    "version": "1.0.0",
+    "description": "Backend für das reQUEST Browser-Plugin",
+    "main": "app.js",
+    "scripts": {
+        "start": "node app.js",
+        "dev": "nodemon app.js"
+    },
+    "dependencies": {
+        "dotenv": "^16.4.5",
+        "express": "^4.21.1",
+        "mongoose": "^8.7.2"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.7"
+    },
+    "keywords": [],
+    "author": "Ivan Milev",
+    "license": "ISC"
+}
