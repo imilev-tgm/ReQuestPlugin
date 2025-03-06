@@ -53,3 +53,19 @@ exports.removeQuest = async (req, res) => {
     res.status(500).json({ message: 'Error removing quest', error });
   }
 };
+
+exports.getQuestByCode = async (req, res) => {
+  try {
+    const { code } = req.params;
+    const quest = await Quest.findOne({ unique_code: code });
+
+    if (!quest) {
+      return res.status(404).json({ message: 'Quest not found' });
+    }
+
+    res.status(200).json(quest);
+  } catch (error) {
+    console.error('Error fetching quest by code:', error);
+    res.status(500).json({ message: 'Error fetching quest', error });
+  }
+};

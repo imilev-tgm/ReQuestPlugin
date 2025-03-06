@@ -1,7 +1,13 @@
 const mongoose = require('mongoose');
 
+const subItemSchema = new mongoose.Schema({
+  subquestion: { type: String, required: true },
+  urls: [{ type: String }], // Array of URLs for this subitem
+});
+
 const questionSchema = new mongoose.Schema({
-  question: { type: String, required: true },
+  title: { type: String, required: true }, // Title for the question
+  subitems: [subItemSchema], // Array of subitems for this question
 });
 
 const commentSchema = new mongoose.Schema({
@@ -14,14 +20,15 @@ const commentSchema = new mongoose.Schema({
 const questSchema = new mongoose.Schema({
   unique_code: { type: String, required: true },
   creator_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-  questions: [questionSchema],
+  title: { type: String, required: true }, // Main title of the quest
+  mainQuestion: { type: String, required: true }, // Main question of the quest
+  description: { type: String, required: true }, // Description of the quest
+  questions: [questionSchema], // Array of questions with subitems
   sources: [
     {
       source_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Source' },
       rating: { type: Number },
-    }
+    },
   ],
   ratings: {
     likes: { type: Number, default: 0 },

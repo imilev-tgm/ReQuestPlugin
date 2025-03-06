@@ -4,6 +4,7 @@ const router = express.Router();
 const questController = require('../controllers/questController');
 
 // Routes for quests
+router.get('/code/:code', questController.getQuestByCode);
 router.get('/', questController.getQuests);      // Get all quests
 router.post('/', questController.addQuest);      // Add a new quest
 router.put('/:id', questController.updateQuest); // Update a quest

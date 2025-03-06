@@ -2,24 +2,35 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const sourceSchema = new Schema({
-  url: { type: String, required: true }, // Source URL
+  url: { type: String, required: true }, // Original Source URL
+  normalizedUrl: { type: String, required: true, unique: true }, // Normalized URL
   title: { type: String, required: true }, // Title of the source
-  avgRating: { type: Number, default: 0 }, // Average rating for the source
-  evaluations: [
+  likes: [
     {
-      user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to the User
-      rating: { type: Number, required: true }, // Rating given by the user
-      comment: { type: String }, // User's comment on the source
-      created_at: { type: Date, default: Date.now } // Date of the evaluation
+      user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      created_at: { type: Date, default: Date.now }
+    }
+  ],
+  dislikes: [
+    {
+      user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+      created_at: { type: Date, default: Date.now }
     }
   ],
   created_at: { type: Date, default: Date.now } // Creation date
 });
 
-// Middleware to update the created_at field on save
+// Middleware to normalize the URL before saving
 sourceSchema.pre('save', function (next) {
-  this.created_at = Date.now();
+  this.normalizedUrl = normalizeUrl(this.url);
   next();
 });
+
+// Utility function to normalize a URL
+function normalizeUrl(url) {
+  return url
+    .replace(/^(https?:\/\/)?(www\.)?/, '') // Remove protocol and "www."
+    .replace(/\/$/, ''); // Remove trailing slash
+}
 
 module.exports = mongoose.model('Source', sourceSchema);

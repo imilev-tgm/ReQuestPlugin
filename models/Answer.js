@@ -1,16 +1,27 @@
 const mongoose = require('mongoose');
-const { Schema } = mongoose;
 
-const answerSchema = new Schema({
-  quest_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Quest', required: true }, // Reference to the Quest
-  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Reference to the User
-  answers: [
-    {
-      question: { type: String, required: true }, // Question being answered
-      response: { type: String, required: true }  // User's answer
-    }
-  ],
-  submitted_at: { type: Date, default: Date.now } // Submission date
+const answerSchema = new mongoose.Schema({
+  user_id: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true 
+  },
+  quest_id: { 
+    type: String,  // Using String for referencing `unique_code`
+    ref: 'Quest',  
+    required: true 
+  },
+  answers: [{
+    questionTitle: { type: String, required: true },
+    subquestion: { type: String, required: true },
+    userAnswer: { type: String, required: true },
+    isCorrect: { type: Boolean, default: false },
+    urls: [{ type: String, required: true }]  // Changed url to an array of strings
+  }],
+  status: { type: String, default: 'pending' },
+  created_at: { type: Date, default: Date.now },
+  updated_at: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Answer', answerSchema);
+const Answer = mongoose.model('Answer', answerSchema);
+module.exports = Answer;

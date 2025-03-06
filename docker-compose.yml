@@ -15,7 +15,7 @@ services:
 
   nodejs:
     build:
-      context: ./data/src
+      context: .
       dockerfile: Dockerfile
     container_name: proj2425_sparks4future_nodejs
     restart: unless-stopped
@@ -24,7 +24,10 @@ services:
       - MONGO_HOST=mongodb
       - MONGO_PORT=27017
     ports:
-      - 63000:3000
+      - 3000:3000
+    volumes:
+      - .:/usr/src/app
+    working_dir: /usr/src/app
     depends_on:
       - mongodb
     networks:
