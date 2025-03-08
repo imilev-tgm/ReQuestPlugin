@@ -2,15 +2,43 @@
 const Answer = require('../models/Answer');
 const Quest = require('../models/Quest');
 const User = require('../models/User');
+const Source = require('../models/Source'); // Import your Source model
+
+// Utility function to normalize a URL (matches your Source model's logic)
+function normalizeUrl(url) {
+  return url.replace(/^(https?:\/\/)?(www\.)?/, '').replace(/\/$/, '');
+}
 
 exports.submitAnswer = async (req, res) => {
   try {
     const { user_id, quest_id, answers } = req.body;
 
-    // Validate quest exists by its `unique_code`
+    // Validate quest exists by its unique_code
     const quest = await Quest.findOne({ unique_code: quest_id });
     if (!quest) {
       return res.status(404).json({ message: 'Quest not found' });
+    }
+
+    // Extract all URLs from the answers
+    const urlSet = new Set();
+    answers.forEach(answer => {
+      if (answer.urls && Array.isArray(answer.urls)) {
+        answer.urls.forEach(url => {
+          if (url && url.trim() !== '') {
+            urlSet.add(url.trim());
+          }
+        });
+      }
+    });
+
+    // For each unique URL, find or create a Source document
+    for (const url of urlSet) {
+      const normalized = normalizeUrl(url);
+      let source = await Source.findOne({ normalizedUrl: normalized });
+      if (!source) {
+        // Provide a title if your Source schema requires one
+        source = await Source.create({ url, normalizedUrl: normalized, title: url });
+      }
     }
 
     // Create the answer document
@@ -32,7 +60,6 @@ exports.submitAnswer = async (req, res) => {
     res.status(500).json({ message: 'Error submitting answer', error });
   }
 };
-
 // Get all answers for a specific user
 exports.getUserAnswers = async (req, res) => {
   try {

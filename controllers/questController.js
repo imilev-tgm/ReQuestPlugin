@@ -1,5 +1,7 @@
 // controllers/questController.js
 const Quest = require('../models/Quest');
+const Source = require('../models/Source');
+
 
 // Get all quests
 exports.getQuests = async (req, res) => {
@@ -11,16 +13,52 @@ exports.getQuests = async (req, res) => {
     res.status(500).json({ message: 'Error fetching quests', error });
   }
 };
+/**
+ * Helper to normalize a URL.
+ * This should match the normalization logic in your Source model.
+ */
+function normalizeUrl(url) {
+  return url
+    .replace(/^(https?:\/\/)?(www\.)?/, '') // Remove protocol and "www."
+    .replace(/\/$/, ''); // Remove trailing slash
+}
 
-// Add a new quest
 exports.addQuest = async (req, res) => {
   try {
-    const newQuest = new Quest(req.body);
-    await newQuest.save();
-    res.status(201).json(newQuest);
+    const questData = req.body;
+
+    // Extract all non-empty URLs from quest questions and subitems
+    const urlSet = new Set();
+    questData.questions.forEach(question => {
+      question.subitems.forEach(subitem => {
+        subitem.urls.forEach(url => {
+          if (url && url.trim() !== '') {
+            urlSet.add(url.trim());
+          }
+        });
+      });
+    });
+
+    // For each URL, find or create a Source document and prepare the reference for the quest
+    const sourcesArray = [];
+    for (const url of urlSet) {
+      const normalized = normalizeUrl(url);
+      let source = await Source.findOne({ normalizedUrl: normalized });
+      if (!source) {
+        source = await Source.create({ url, normalizedUrl: normalized, title: url });
+      }
+      sourcesArray.push({ source_id: source._id, rating: 0 });
+    }
+
+    // Attach the sources array to the quest data
+    questData.sources = sourcesArray;
+
+    // Now create the Quest document as usual
+    const quest = await Quest.create(questData);
+    res.status(201).json(quest);
   } catch (error) {
-    console.error('Error adding quest:', error);
-    res.status(500).json({ message: 'Error adding quest', error });
+    console.error('Error creating quest:', error);
+    res.status(500).json({ error: error.message });
   }
 };
 
