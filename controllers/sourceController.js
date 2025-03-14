@@ -11,8 +11,6 @@ exports.getAllSources = async (req, res) => {
   }
 };
 
-// Add a new source
-// Add a new source
 // Add a new source or return existing source
 exports.addSource = async (req, res) => {
   try {

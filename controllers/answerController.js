@@ -1,118 +1,118 @@
-// controllers/answerController.js
 const Answer = require('../models/Answer');
 const Quest = require('../models/Quest');
 const User = require('../models/User');
-const Source = require('../models/Source'); // Import your Source model
+const Source = require('../models/Source');
 
-// Utility function to normalize a URL (matches your Source model's logic)
 function normalizeUrl(url) {
   return url.replace(/^(https?:\/\/)?(www\.)?/, '').replace(/\/$/, '');
 }
 
 exports.submitAnswer = async (req, res) => {
   try {
-    const { user_id, quest_id, answers } = req.body;
+    const { quest_id, answers } = req.body;
+    const userId = req.user.userId; // Aus JWT-Token
 
-    // Validate quest exists by its unique_code
+    // Quest-Validierung
     const quest = await Quest.findOne({ unique_code: quest_id });
     if (!quest) {
-      return res.status(404).json({ message: 'Quest not found' });
+      return res.status(404).json({ message: 'Quest nicht gefunden' });
     }
 
-    // Extract all URLs from the answers
+    // URL-Verarbeitung
     const urlSet = new Set();
     answers.forEach(answer => {
-      if (answer.urls && Array.isArray(answer.urls)) {
-        answer.urls.forEach(url => {
-          if (url && url.trim() !== '') {
-            urlSet.add(url.trim());
-          }
-        });
-      }
+      answer.urls?.forEach(url => url.trim() && urlSet.add(url.trim()));
     });
 
-    // For each unique URL, find or create a Source document
-    for (const url of urlSet) {
+    // Source-Erstellung
+    const sourceOps = Array.from(urlSet).map(async url => {
       const normalized = normalizeUrl(url);
-      let source = await Source.findOne({ normalizedUrl: normalized });
-      if (!source) {
-        // Provide a title if your Source schema requires one
-        source = await Source.create({ url, normalizedUrl: normalized, title: url });
-      }
-    }
+      return Source.findOneAndUpdate(
+        { normalizedUrl: normalized },
+        { $setOnInsert: { url, normalizedUrl: normalized, title: url } },
+        { upsert: true, new: true }
+      );
+    });
 
-    // Create the answer document
-    const newAnswer = new Answer({ user_id, quest_id, answers });
+    await Promise.all(sourceOps);
+
+    // Antwort speichern
+    const newAnswer = new Answer({ 
+      user_id: userId, 
+      quest_id,
+      answers
+    });
     await newAnswer.save();
 
-    // Increment the user's questcounter
-    const user = await User.findById(user_id);
-    if (user) {
-      user.questcounter += 1;
-      await user.save();
-    } else {
-      console.warn('User not found for incrementing questcounter');
-    }
+    // Questcounter aktualisieren
+    await User.findByIdAndUpdate(userId, { $inc: { questcounter: 1 } });
 
     res.status(201).json(newAnswer);
   } catch (error) {
-    console.error('Error submitting answer:', error);
-    res.status(500).json({ message: 'Error submitting answer', error });
-  }
-};
-// Get all answers for a specific user
-exports.getUserAnswers = async (req, res) => {
-  try {
-    const { user_id } = req.params;
-    const answers = await Answer.find({ user_id }); // Removed populate('quest_id')
-    res.status(200).json(answers);
-  } catch (error) {
-    console.error('Error fetching user answers:', error);
-    res.status(500).json({ message: 'Error fetching answers', error });
+    console.error('Fehler beim Antworten:', error);
+    res.status(500).json({ message: 'Serverfehler', error });
   }
 };
 
-// Get all answers for a specific quest
+exports.getUserAnswers = async (req, res) => {
+  try {
+    const answers = await Answer.find({ user_id: req.user.userId });
+    res.status(200).json(answers);
+  } catch (error) {
+    console.error('Fehler beim Laden:', error);
+    res.status(500).json({ message: 'Serverfehler', error });
+  }
+};
+
 exports.getQuestAnswers = async (req, res) => {
   try {
     const { quest_id } = req.params;
-    const answers = await Answer.find({ quest_id }).populate('user_id');
+    const answers = await Answer.find({ quest_id })
+      .populate('user_id', 'username email');
+    
     res.status(200).json(answers);
   } catch (error) {
-    console.error('Error fetching quest answers:', error);
-    res.status(500).json({ message: 'Error fetching answers', error });
-  }
-};
-// Update an answer (e.g., for corrections or re-submissions)
-exports.updateAnswer = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updatedAnswer = await Answer.findByIdAndUpdate(
-      id,
-      { $set: req.body, updated_at: Date.now() },
-      { new: true }
-    );
-    if (!updatedAnswer) {
-      return res.status(404).json({ message: 'Answer not found' });
-    }
-    res.status(200).json(updatedAnswer);
-  } catch (error) {
-    console.error('Error updating answer:', error);
-    res.status(500).json({ message: 'Error updating answer', error });
+    console.error('Fehler beim Laden:', error);
+    res.status(500).json({ message: 'Serverfehler', error });
   }
 };
 
-// Delete an answer
-exports.deleteAnswer = async (req, res) => {
+exports.updateAnswer = async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedAnswer = await Answer.findByIdAndDelete(id);
-    if (!deletedAnswer) {
-      return res.status(404).json({ message: 'Answer not found' });
+    const answer = await Answer.findById(id);
+
+    if (!answer) return res.status(404).json({ message: 'Antwort nicht gefunden' });
+    if (answer.user_id.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Zugriff verweigert' });
     }
-    res.status(200).json({ message: 'Answer deleted' });
+
+    const updatedAnswer = await Answer.findByIdAndUpdate(
+      id,
+      { ...req.body, updated_at: Date.now() },
+      { new: true }
+    );
+    
+    res.status(200).json(updatedAnswer);
   } catch (error) {
-    console.error('Error deleting answer:', error);
-    res.status(500).json({ message: 'Error deleting answer', error });
+    console.error('Aktualisierungsfehler:', error);
+    res.status(500).json({ message: 'Serverfehler', error });
+  }
+};
+
+exports.deleteAnswer = async (req, res) => {
+  try {
+    const answer = await Answer.findById(req.params.id);
+
+    if (!answer) return res.status(404).json({ message: 'Antwort nicht gefunden' });
+    if (answer.user_id.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Zugriff verweigert' });
+    }
+
+    await Answer.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: 'Antwort gelöscht' });
+  } catch (error) {
+    console.error('Löschfehler:', error);
+    res.status(500).json({ message: 'Serverfehler', error });
   }
 };

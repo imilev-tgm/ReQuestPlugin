@@ -1,17 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const questLibraryController = require('../controllers/questLibraryController');
+const authMiddleware = require('../middleware/auth');
+const adminMiddleware = require('../middleware/adminMiddleware');
 
-// Route to get all quests in a user's library
-router.get('/:userId', questLibraryController.getQuestLibrary);
+router.get('/', questLibraryController.getQuestLibrary);
+router.post('/', authMiddleware, adminMiddleware, questLibraryController.addQuestToLibrary);
 
-// Route to add a new quest to the library
-router.post('/', questLibraryController.addQuestToLibrary);
-
-// Route to update a quest in the library
-router.put('/:id', questLibraryController.updateQuestInLibrary);
-
-// Route to remove a quest from the library
-router.delete('/:id', questLibraryController.removeQuestFromLibrary);
-
-module.exports = router;
+module.exports = router; // ✅ Correct export

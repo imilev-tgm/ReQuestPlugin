@@ -4,7 +4,6 @@ const { Schema } = mongoose;
 const sourceSchema = new Schema({
   url: { type: String, required: true }, // Original Source URL
   normalizedUrl: { type: String, required: true, unique: true }, // Normalized URL
-  title: { type: String, required: true }, // Title of the source
   likes: [
     {
       user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

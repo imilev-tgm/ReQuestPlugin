@@ -2,12 +2,12 @@
 const express = require('express');
 const router = express.Router();
 const answerController = require('../controllers/answerController');
-console.log(answerController); // Should show { submitAnswer: [Function], ... }
+const authMiddleware = require('../middleware/auth');
 
-router.post('/', answerController.submitAnswer);
-router.get('/user/:user_id', answerController.getUserAnswers);
+router.post('/', authMiddleware, answerController.submitAnswer);
+router.get('/user', authMiddleware, answerController.getUserAnswers);
 router.get('/quest/:quest_id', answerController.getQuestAnswers);
-router.put('/:id', answerController.updateAnswer);
-router.delete('/:id', answerController.deleteAnswer);
+router.put('/:id', authMiddleware, answerController.updateAnswer);
+router.delete('/:id', authMiddleware, answerController.deleteAnswer);
 
 module.exports = router;

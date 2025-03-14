@@ -7,6 +7,11 @@ const userSchema = new Schema({
   password_hash: { type: String, required: true },
   created_at: { type: Date, default: Date.now },
   questcounter: { type: Number, default: 0 },
+  role: { 
+    type: String, 
+    enum: ['user', 'admin'], 
+    default: 'user' 
+  },
   likes: [
     {
       quest_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Quest' }

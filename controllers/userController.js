@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
 // Get all users
 
 exports.getAllUsers = async (req, res) => {
@@ -55,10 +57,7 @@ exports.deleteUser = async (req, res) => {
 
 
 
-
-// Existing code ...
-
-// Login user
+// Login user (updated to return JWT)
 exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
 
@@ -69,11 +68,15 @@ exports.loginUser = async (req, res) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Compare the provided password with the stored hash
     const isMatch = await bcrypt.compare(password, user.password_hash);
 
     if (isMatch) {
-      return res.status(200).json({ success: true });
+      const token = jwt.sign(
+        { userId: user._id, email: user.email, role: user.role }, // Include role
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+      res.status(200).json({ success: true, token });
     } else {
       return res.status(401).json({ success: false, message: 'Incorrect password' });
     }
@@ -82,7 +85,6 @@ exports.loginUser = async (req, res) => {
     return res.status(500).json({ success: false, message: 'Server error', error });
   }
 };
-
 
 exports.registerUser = async (req, res) => {
   const { username, email, password } = req.body;
